@@ -38,6 +38,26 @@ let uppercaseEnabled = false;
 let symbolsEnabled = false;
 let audioCtx = null;
 
+let currentView = 'game';
+let paperScrollY = 100;
+
+window.addEventListener('wheel', (e) => {
+    if (currentView === 'game') return;
+    
+    paperScrollY -= e.deltaY * 0.5;
+    
+    if (paperScrollY > 100) paperScrollY = 100;
+    
+    const activeSheet = document.querySelector('.sheet-content:not(.hidden)');
+    if (activeSheet) {
+        const contentHeight = activeSheet.offsetHeight;
+        const minScroll = -contentHeight + 400; 
+        if (paperScrollY < minScroll) paperScrollY = minScroll;
+    }
+
+    gameArea.style.transform = `translateY(${paperScrollY}px)`;
+});
+
 loadWords().then(() => {
     initGame();
 });
@@ -164,13 +184,40 @@ function playSound(type) {
         noiseGain.gain.setValueAtTime(2.5, t);
         noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
         noise.stop(t + 0.2);
+    } else if (type === 'tear') {
+        const duration = 0.55;
+        
+        const slide = audioCtx.createBufferSource();
+        slide.buffer = noiseBuffer;
+        
+        const slideFilter = audioCtx.createBiquadFilter();
+        slideFilter.type = 'lowpass';
+        slideFilter.Q.value = 0.6; 
+        
+        slideFilter.frequency.setValueAtTime(150, t);
+        slideFilter.frequency.exponentialRampToValueAtTime(500, t + duration);
+        
+        const slideGain = audioCtx.createGain();
+        slideGain.gain.setValueAtTime(0, t);
+
+        slideGain.gain.linearRampToValueAtTime(0.35, t + 0.08);
+        slideGain.gain.linearRampToValueAtTime(0.25, t + duration - 0.15);
+        slideGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+        
+        slide.connect(slideFilter);
+        slideFilter.connect(slideGain);
+        slideGain.connect(audioCtx.destination);
+        
+        slide.start(t);
+        slide.stop(t + duration);
     }
 }
 
-function initGame() {
-    const isRestart = wordsContainer.children.length > 0 || isGameFinished;
+function initGame(tearPaper = true) {
+    const isRestart = wordsContainer.children.length > 0 || isGameFinished || currentView !== 'game';
 
-    if (isRestart) {
+    if (isRestart && tearPaper) {
+        playSound('tear');
         const oldPaper = gameArea.cloneNode(true);
         oldPaper.id = 'old-paper';
         oldPaper.style.position = 'absolute';
@@ -199,6 +246,7 @@ function initGame() {
         }, 600);
     }
 
+    currentView = 'game';
     window.removeEventListener('keydown', handleKeydown);
 
     currentWordIndex = 0;
@@ -212,6 +260,9 @@ function initGame() {
     wordsContainer.innerHTML = '';
     wordsContainer.scrollTop = 0;
     wordsContainer.classList.remove('hidden');
+    document.getElementById('settings-sheet').classList.add('hidden');
+    document.getElementById('stats-sheet').classList.add('hidden');
+    
     statsContainer.classList.add('hidden');
     document.getElementById('restart-note').classList.add('hidden');
     restartBtn.classList.add('hidden');
@@ -225,7 +276,7 @@ function initGame() {
     
     updateCursor();
 
-    if (isRestart) {
+    if (isRestart && tearPaper) {
         gameArea.style.transition = 'none';
         gameArea.style.transform = 'translateY(100%)';
         
@@ -238,6 +289,64 @@ function initGame() {
     } else {
         gameArea.style.transform = 'translateY(100px)';
     }
+}
+
+function switchView(newView) {
+    if (currentView === newView) return;
+    
+    playSound('tear');
+    const oldPaper = gameArea.cloneNode(true);
+    oldPaper.id = 'old-paper';
+    oldPaper.style.position = 'absolute';
+    oldPaper.style.top = '0';
+    oldPaper.style.left = '0';
+    oldPaper.style.width = '100%';
+    oldPaper.style.height = '100%';
+    oldPaper.style.zIndex = '10';
+    oldPaper.style.transform = gameArea.style.transform || 'translateY(100px)';
+    oldPaper.style.transition = 'none';
+    
+    oldPaper.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+    gameArea.parentElement.appendChild(oldPaper);
+    void oldPaper.offsetWidth;
+    oldPaper.classList.add('tearing');
+    oldPaper.style.transition = 'transform 0.6s ease-in, opacity 0.6s ease-in';
+    oldPaper.style.transform = 'translate(1000px, -200px) rotate(15deg)';
+    oldPaper.style.opacity = '0';
+    setTimeout(() => oldPaper.remove(), 600);
+
+    currentView = newView;
+    
+    document.getElementById('words').classList.add('hidden');
+    document.getElementById('settings-sheet').classList.add('hidden');
+    document.getElementById('stats-sheet').classList.add('hidden');
+    statsContainer.classList.add('hidden');
+    document.getElementById('restart-note').classList.add('hidden');
+    restartBtn.classList.add('hidden');
+
+    paperScrollY = 100;
+    gameArea.style.transition = 'none';
+    gameArea.style.transform = 'translateY(100%)';
+
+    if (newView === 'game') {
+        initGame(false); 
+    } else if (newView === 'settings') {
+        document.getElementById('settings-sheet').classList.remove('hidden');
+    } else if (newView === 'stats') {
+        document.getElementById('stats-sheet').classList.remove('hidden');
+        renderGlobalStatsTable();
+    }
+
+    settingsBtn.classList.toggle('active', newView === 'settings');
+    statsBtn.classList.toggle('active', newView === 'stats');
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            gameArea.style.transition = 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+            gameArea.style.transform = `translateY(${paperScrollY}px)`;
+        });
+    });
 }
 
 function generateWords() {
@@ -362,6 +471,8 @@ function updateCursor() {
 window.addEventListener('resize', updateCursor);
 
 function handleKeydown(e) {
+    if (currentView !== 'game') return;
+
     if (isGameFinished) {
         if (e.key === 'Tab' || e.key === 'Enter') {
             e.preventDefault();
@@ -401,13 +512,15 @@ function handleKeydown(e) {
         if (currentLetterIndex > 0) {
             currentLetterIndex--;
             const letter = currentWordDiv.children[currentLetterIndex];
-            letter.classList.remove('correct', 'incorrect');
+            if (currentLetterIndex >= currentWord.length) {
+                letter.remove();
+            } else {
+                letter.classList.remove('correct', 'incorrect');
+            }
         } else if (currentWordIndex > 0 && currentLetterIndex === 0) {
             currentWordIndex--;
-            const prevWord = currentWords[currentWordIndex];
-            currentLetterIndex = prevWord.length;
-            
             const prevWordDiv = wordDivs[currentWordIndex];
+            currentLetterIndex = prevWordDiv.children.length;
         }
         updateCursor();
         return;
@@ -473,32 +586,44 @@ function handleKeydown(e) {
 
             updateCursor();
         } else if (currentWordIndex === currentWords.length - 1) {
+            finishGame();
         }
         return;
     }
 
     if (e.key.length === 1) {
-        if (!currentLetterSpan) {
-            return;
-        }
+        if (currentLetterIndex < currentWord.length) {
+            const expectedChar = currentWord[currentLetterIndex];
+            
+            if (!charStats[expectedChar]) {
+                charStats[expectedChar] = { total: 0, errors: 0 };
+            }
+            charStats[expectedChar].total++;
 
-        const expectedChar = currentWord[currentLetterIndex];
-        
-        if (!charStats[expectedChar]) {
-            charStats[expectedChar] = { total: 0, errors: 0 };
-        }
-        charStats[expectedChar].total++;
-
-        if (e.key === expectedChar) {
-            currentLetterSpan.classList.add('correct');
-            correctChars++;
-            playSound('click');
+            if (e.key === expectedChar) {
+                currentLetterSpan.classList.add('correct');
+                correctChars++;
+                playSound('click');
+            } else {
+                currentLetterSpan.classList.add('incorrect');
+                errorCount++;
+                playSound('error');
+                
+                charStats[expectedChar].errors++;
+                
+                if (suddenDeathEnabled) {
+                    finishGame();
+                    return;
+                }
+            }
         } else {
-            currentLetterSpan.classList.add('incorrect');
+            const extraSpan = document.createElement('span');
+            extraSpan.className = 'letter incorrect extra';
+            extraSpan.textContent = e.key;
+            currentWordDiv.appendChild(extraSpan);
+            
             errorCount++;
             playSound('error');
-            
-            charStats[expectedChar].errors++;
             
             if (suddenDeathEnabled) {
                 finishGame();
@@ -508,18 +633,17 @@ function handleKeydown(e) {
         
         totalChars++;
         currentLetterIndex++;
+        
+        updateCursor();
 
         if (currentWordIndex === currentWords.length - 1 && currentLetterIndex === currentWord.length) {
             if (wordCount === 'infinite') {
                 const newWords = generateWords();
                 currentWords = currentWords.concat(newWords);
                 renderWords(true);
-                updateCursor();
             } else {
                 finishGame();
             }
-        } else {
-            updateCursor();
         }
     }
 }
@@ -561,10 +685,13 @@ function finishGame() {
 }
 
 const settingsBtn = document.getElementById('settings-btn');
-const settingsModal = document.getElementById('settings-modal');
-const closeSettings = document.getElementById('close-settings');
+const closeSettingsBtn = document.getElementById('close-settings-btn');
 
 settingsBtn.addEventListener('click', () => {
+    if (currentView === 'settings') {
+        switchView('game');
+        return;
+    }
     document.querySelectorAll('[data-lang]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === currentLanguage);
     });
@@ -575,17 +702,11 @@ settingsBtn.addEventListener('click', () => {
     document.querySelectorAll('[data-mode]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === generationMode);
     });
-    settingsModal.classList.add('show');
+    switchView('settings');
 });
 
-closeSettings.addEventListener('click', () => {
-    settingsModal.classList.remove('show');
-});
-
-window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-        settingsModal.classList.remove('show');
-    }
+closeSettingsBtn.addEventListener('click', () => {
+    switchView('game');
 });
 
 document.querySelectorAll('[data-lang]').forEach(btn => {
@@ -595,8 +716,6 @@ document.querySelectorAll('[data-lang]').forEach(btn => {
         
         document.querySelectorAll('[data-lang]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        initGame();
     });
 });
 
@@ -608,8 +727,6 @@ document.querySelectorAll('[data-count]').forEach(btn => {
         
         document.querySelectorAll('[data-count]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        initGame();
     });
 });
 
@@ -620,35 +737,32 @@ document.querySelectorAll('[data-mode]').forEach(btn => {
         
         document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        
-        initGame();
     });
 });
 
 const statsBtn = document.getElementById('stats-btn');
-const statsModal = document.getElementById('stats-modal');
-const closeModal = document.querySelector('.close-modal');
+const closeStatsBtn = document.getElementById('close-stats-btn');
 const resetStatsBtn = document.getElementById('reset-stats-btn');
 const globalStatsTableBody = document.querySelector('#global-stats-table tbody');
 
 numbersBtn.addEventListener('click', () => {
     numbersEnabled = !numbersEnabled;
     numbersBtn.classList.toggle('active');
-    initGame();
+    if (currentView === 'game') initGame();
     numbersBtn.blur();
 });
 
 uppercaseBtn.addEventListener('click', () => {
     uppercaseEnabled = !uppercaseEnabled;
     uppercaseBtn.classList.toggle('active');
-    initGame();
+    if (currentView === 'game') initGame();
     uppercaseBtn.blur();
 });
 
 symbolsBtn.addEventListener('click', () => {
     symbolsEnabled = !symbolsEnabled;
     symbolsBtn.classList.toggle('active');
-    initGame();
+    if (currentView === 'game') initGame();
     symbolsBtn.blur();
 });
 
@@ -662,24 +776,19 @@ soundBtn.addEventListener('click', () => {
 suddenDeathBtn.addEventListener('click', () => {
     suddenDeathEnabled = !suddenDeathEnabled;
     suddenDeathBtn.classList.toggle('active');
-    initGame();
+    if (currentView === 'game') initGame();
 });
 
 statsBtn.addEventListener('click', () => {
-    renderGlobalStatsTable();
-    statsModal.classList.add('show');
-});
-
-closeModal.addEventListener('click', () => {
-    statsModal.classList.remove('show');
-    if (!isGameFinished) {
+    if (currentView === 'stats') {
+        switchView('game');
+    } else {
+        switchView('stats');
     }
 });
 
-window.addEventListener('click', (e) => {
-    if (e.target === statsModal) {
-        statsModal.classList.remove('show');
-    }
+closeStatsBtn.addEventListener('click', () => {
+    switchView('game');
 });
 
 resetStatsBtn.addEventListener('click', () => {
@@ -692,6 +801,16 @@ resetStatsBtn.addEventListener('click', () => {
 });
 
 let currentSort = { column: 'rate', direction: 'desc' };
+let currentFilter = 'all';
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderGlobalStatsTable();
+    });
+});
 
 document.querySelectorAll('#global-stats-table th.sortable').forEach(th => {
     th.addEventListener('click', () => {
@@ -716,7 +835,16 @@ function renderGlobalStatsTable() {
         }
     });
 
-    const entries = Object.entries(charStats).sort((a, b) => {
+    const entries = Object.entries(charStats).filter(([char]) => {
+        switch (currentFilter) {
+            case 'lowercase': return /[a-zñ]/.test(char);
+            case 'uppercase': return /[A-ZÑ]/.test(char);
+            case 'accents': return /[áéíóúüÁÉÍÓÚÜ]/.test(char);
+            case 'numbers': return /[0-9]/.test(char);
+            case 'symbols': return !/[a-zñA-ZÑ0-9áéíóúüÁÉÍÓÚÜ]/.test(char);
+            default: return true;
+        }
+    }).sort((a, b) => {
         const charA = a[0];
         const charB = b[0];
         const statsA = a[1];

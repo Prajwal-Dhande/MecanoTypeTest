@@ -20,7 +20,67 @@
             
             <div class="paper-guide">
                 <div id="game-area" class="paper-sheet">
-                    <div id="words" class="words">
+                    <div id="words" class="words"></div>
+                    
+                    <div id="settings-sheet" class="sheet-content hidden">
+                        <div class="settings-container">
+                            <div class="setting-group">
+                                <label>Idioma:</label>
+                                <div class="toggle-group">
+                                    <button class="toggle-btn active" data-lang="es">Español</button>
+                                    <button class="toggle-btn" data-lang="en">Inglés</button>
+                                </div>
+                            </div>
+                            <div class="setting-group">
+                                <label>Palabras:</label>
+                                <div class="toggle-group">
+                                    <button class="toggle-btn" data-count="10">10</button>
+                                    <button class="toggle-btn active" data-count="25">25</button>
+                                    <button class="toggle-btn" data-count="50">50</button>
+                                    <button class="toggle-btn" data-count="100">100</button>
+                                    <button class="toggle-btn" data-count="infinite">Infinito</button>
+                                </div>
+                            </div>
+                            <div class="setting-group">
+                                <label>Modo de Generación:</label>
+                                <div class="toggle-group">
+                                    <button class="toggle-btn active" data-mode="random">Aleatorio</button>
+                                    <button class="toggle-btn" data-mode="learning">Aprendizaje</button>
+                                </div>
+                            </div>
+                            <div class="setting-group">
+                                <button id="close-settings-btn" class="action-btn">Volver al Juego</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="stats-sheet" class="sheet-content hidden">
+                        <div class="stats-filters">
+                            <button class="filter-btn active" data-filter="all">Todo</button>
+                            <button class="filter-btn" data-filter="lowercase">a-z</button>
+                            <button class="filter-btn" data-filter="uppercase">A-Z</button>
+                            <button class="filter-btn" data-filter="accents">á-ü</button>
+                            <button class="filter-btn" data-filter="numbers">0-9</button>
+                            <button class="filter-btn" data-filter="symbols">#@!</button>
+                        </div>
+                        <div class="table-container">
+                            <table id="global-stats-table" class="global-stats-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-sort="char">Letra <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="total">Total <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="errors">Fallos <i class="fas fa-sort"></i></th>
+                                        <th class="sortable" data-sort="rate">% Error <i class="fas fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="sheet-footer">
+                            <button id="reset-stats-btn" class="danger-btn">Resetear Historial</button>
+                            <button id="close-stats-btn" class="action-btn">Volver al Juego</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -34,7 +94,7 @@
                 
                 <div class="controls-row">
                     <div class="keyboard-area">
-                        <button id="numbers-btn" class="mode-btn" title="Números"><i class="fas fa-calculator"></i></button>
+                        <button id="numbers-btn" class="mode-btn" title="Números" style="font-family: var(--font-typewriter); font-weight: bold;">123</button>
                         <button id="uppercase-btn" class="mode-btn" title="Mayúsculas"><i class="fas fa-font"></i></button>
                         <button id="symbols-btn" class="mode-btn" title="Símbolos"><i class="fas fa-at"></i></button>
                         <button id="sudden-death-btn" class="mode-btn" title="Muerte Súbita"><i class="fas fa-skull"></i></button>
@@ -77,67 +137,6 @@
             <div class="pin"></div>
             <div id="restart-button" tabindex="0">
                 <i class="fas fa-redo"></i> REINICIAR
-            </div>
-        </div>
-    </div>
-
-    <div id="stats-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Estadísticas Históricas</h2>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="table-container">
-                <table id="global-stats-table">
-                    <thead>
-                        <tr>
-                            <th class="sortable" data-sort="char">Letra <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort="total">Total <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort="errors">Fallos <i class="fas fa-sort"></i></th>
-                            <th class="sortable" data-sort="rate">% Error <i class="fas fa-sort"></i></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-            <div class="modal-footer">
-                <button id="reset-stats-btn" class="danger-btn">Resetear Historial</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="settings-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Ajustes</h2>
-                <span class="close-modal" id="close-settings">&times;</span>
-            </div>
-            <div class="settings-container">
-                <div class="setting-group">
-                    <label>Idioma:</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn active" data-lang="es">Español</button>
-                        <button class="toggle-btn" data-lang="en">Inglés</button>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label>Palabras:</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn" data-count="10">10</button>
-                        <button class="toggle-btn active" data-count="25">25</button>
-                        <button class="toggle-btn" data-count="50">50</button>
-                        <button class="toggle-btn" data-count="100">100</button>
-                        <button class="toggle-btn" data-count="infinite">Infinito</button>
-                    </div>
-                </div>
-                <div class="setting-group">
-                    <label>Modo de Generación:</label>
-                    <div class="toggle-group">
-                        <button class="toggle-btn active" data-mode="random">Aleatorio</button>
-                        <button class="toggle-btn" data-mode="learning">Aprendizaje</button>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
