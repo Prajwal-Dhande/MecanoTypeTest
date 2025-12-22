@@ -30,6 +30,7 @@ let correctChars = 0;
 let totalChars = 0;
 let errorCount = 0;
 let charStats = JSON.parse(localStorage.getItem('mecano_char_stats')) || {};
+let currentGameCharStats = {};
 
 let soundEnabled = true;
 let suddenDeathEnabled = false;
@@ -256,6 +257,7 @@ function initGame(tearPaper = true) {
     correctChars = 0;
     totalChars = 0;
     errorCount = 0;
+    currentGameCharStats = {};
     
     wordsContainer.innerHTML = '';
     wordsContainer.scrollTop = 0;
@@ -544,6 +546,11 @@ function handleKeydown(e) {
                 }
                 charStats[char].total++;
                 charStats[char].errors++;
+
+                if (!currentGameCharStats[char]) {
+                    currentGameCharStats[char] = 0;
+                }
+                currentGameCharStats[char]++;
             }
             
             if (skippedErrors > 0) {
@@ -611,6 +618,11 @@ function handleKeydown(e) {
                 
                 charStats[expectedChar].errors++;
                 
+                if (!currentGameCharStats[expectedChar]) {
+                    currentGameCharStats[expectedChar] = 0;
+                }
+                currentGameCharStats[expectedChar]++;
+
                 if (suddenDeathEnabled) {
                     finishGame();
                     return;
@@ -669,8 +681,8 @@ function finishGame() {
     accEl.textContent = accuracy + '%';
     errorsEl.textContent = errorCount;
     
-    const sortedWeakKeys = Object.entries(charStats)
-        .sort((a, b) => b[1].errors - a[1].errors)
+    const sortedWeakKeys = Object.entries(currentGameCharStats)
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(k => k[0])
         .join(' ');
