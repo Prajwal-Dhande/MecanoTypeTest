@@ -8,6 +8,7 @@ let generationMode = localStorage.getItem('mecano_generation_mode') || 'random';
 let zenModeEnabled = localStorage.getItem('mecano_zen_mode') === 'true';
 let currentTheme = localStorage.getItem('mecano_theme') || 'light';
 if (currentTheme === 'dark') document.body.classList.add('dark-mode');
+
 const gameArea = document.getElementById('game-area');
 const wordsContainer = document.getElementById('words');
 const statsContainer = document.getElementById('stats');
@@ -31,6 +32,7 @@ let startTime = 0;
 let correctChars = 0;
 let totalChars = 0;
 let errorCount = 0;
+let zenBaseTop = 0;
 let charStats = JSON.parse(localStorage.getItem('mecano_char_stats')) || {};
 let currentGameCharStats = {};
 
@@ -275,11 +277,15 @@ function initGame(tearPaper = true) {
 
     if (zenModeEnabled) {
         document.body.classList.add('zen-mode');
+        currentWords = [];
         const cursor = document.createElement('span');
         cursor.className = 'zen-cursor';
         wordsContainer.appendChild(cursor);
         
-        zenBaseTop = cursor.offsetTop;
+        // Ensure layout is updated before measuring
+        requestAnimationFrame(() => {
+            zenBaseTop = cursor.offsetTop;
+        });
     } else {
         document.body.classList.remove('zen-mode');
         currentWords = generateWords();
@@ -458,6 +464,10 @@ function renderWords(append = false) {
 let typingTimeout;
 
 function updateCursor() {
+    if (zenModeEnabled) {
+        updateZenCursor();
+        return;
+    }
     document.querySelectorAll('.letter').forEach(el => el.classList.remove('current'));
     document.querySelectorAll('.word').forEach(el => el.classList.remove('current-word-end'));
     
@@ -484,7 +494,6 @@ function updateCursor() {
 
 window.addEventListener('resize', updateCursor);
 
-let zenBaseTop = 0;
 
 function updateZenCursor() {
     const cursor = wordsContainer.querySelector('.zen-cursor');
