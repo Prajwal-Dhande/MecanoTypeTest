@@ -1096,3 +1096,27 @@ body.zen-mode .letter.current {
   font-family: var(--font-typewriter);
   font-weight: bold;
 }
+
+
+/* Dark Mode Specific Styles */
+body.dark-mode .sticky-note, 
+body.dark-mode .restart-note {
+    background-color: #1e1e1e !important;  
+    border: 2px solid #ffb300 !important;  
+    color: #ffffff !important;             
+    box-shadow: 0 8px 16px rgba(0,0,0,0.6) !important; 
+}
+
+body.dark-mode .sticky-note h3,
+body.dark-mode .stat .val {
+    color: #ffb300 !important; 
+    border-bottom-color: #ffb300 !important;
+}
+
+body.dark-mode .stat .label {
+    color: #cccccc !important; 
+}
+
+body.dark-mode #restart-button {
+    color: #ffffff !important;
+}
