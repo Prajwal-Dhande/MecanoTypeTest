@@ -1,0 +1,14 @@
+name: Assign issue on comment
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/assign-me@v1
